@@ -126,6 +126,18 @@ def settings():
     clinic_id = session['clinic_id']
     clinic = Clinic.query.get_or_404(clinic_id)
     
+    # Set defaults for new columns if they don't exist yet (backward compatibility)
+    if not hasattr(clinic, 'email_verified'):
+        clinic.email_verified = True
+    if not hasattr(clinic, 'sms_enabled'):
+        clinic.sms_enabled = False
+    if not hasattr(clinic, 'sms_api_key'):
+        clinic.sms_api_key = None
+    if not hasattr(clinic, 'sms_sender_id'):
+        clinic.sms_sender_id = None
+    if not hasattr(clinic, 'sms_template_id'):
+        clinic.sms_template_id = None
+    
     if request.method == 'POST':
         action = request.form.get('action')
         
