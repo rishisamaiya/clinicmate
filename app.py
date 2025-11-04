@@ -180,33 +180,51 @@ def patients():
 def add_patient():
     """Add new patient"""
     if request.method == 'POST':
-        try:
-            clinic_id = session['clinic_id']
-            
-            patient = Patient(
-                clinic_id=clinic_id,
-                patient_id=Patient.generate_patient_id(clinic_id),
-                name=request.form.get('name'),
-                age=int(request.form.get('age')) if request.form.get('age') else None,
-                gender=request.form.get('gender'),
-                blood_group=request.form.get('blood_group'),
-                phone=request.form.get('phone'),
-                email=request.form.get('email'),
-                address=request.form.get('address'),
-                allergies=request.form.get('allergies'),
-                chronic_conditions=request.form.get('chronic_conditions'),
-                emergency_contact=request.form.get('emergency_contact'),
-                emergency_phone=request.form.get('emergency_phone')
-            )
-            
-            db.session.add(patient)
-            db.session.commit()
-            
-            flash(f'Patient {patient.name} registered successfully! (ID: {patient.patient_id})', 'success')
-            return redirect(url_for('view_patient', patient_id=patient.id))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error: {str(e)}', 'error')
+        clinic_id = session['clinic_id']
+        max_retries = 3
+        
+        for attempt in range(max_retries):
+            try:
+                # Generate unique patient ID
+                patient_id = Patient.generate_patient_id(clinic_id)
+                
+                patient = Patient(
+                    clinic_id=clinic_id,
+                    patient_id=patient_id,
+                    name=request.form.get('name'),
+                    age=int(request.form.get('age')) if request.form.get('age') else None,
+                    gender=request.form.get('gender'),
+                    blood_group=request.form.get('blood_group'),
+                    phone=request.form.get('phone'),
+                    email=request.form.get('email'),
+                    address=request.form.get('address'),
+                    allergies=request.form.get('allergies'),
+                    chronic_conditions=request.form.get('chronic_conditions'),
+                    emergency_contact=request.form.get('emergency_contact'),
+                    emergency_phone=request.form.get('emergency_phone')
+                )
+                
+                db.session.add(patient)
+                db.session.commit()
+                
+                flash(f'✅ Patient {patient.name} registered successfully! (ID: {patient.patient_id})', 'success')
+                return redirect(url_for('view_patient', patient_id=patient.id))
+                
+            except Exception as e:
+                db.session.rollback()
+                error_msg = str(e)
+                
+                # Check if it's a duplicate key error
+                if 'unique constraint' in error_msg.lower() or 'duplicate' in error_msg.lower():
+                    if attempt < max_retries - 1:
+                        # Retry with a new ID
+                        continue
+                    else:
+                        flash('⚠️ Unable to generate unique patient ID. Please try again.', 'error')
+                else:
+                    # Other error - show and don't retry
+                    flash(f'❌ Error: {error_msg}', 'error')
+                    break
     
     return render_template('patients/add.html')
 

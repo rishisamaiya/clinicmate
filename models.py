@@ -82,14 +82,40 @@ class Patient(db.Model):
     
     @staticmethod
     def generate_patient_id(clinic_id):
-        """Generate unique patient ID"""
-        last_patient = Patient.query.filter_by(clinic_id=clinic_id).order_by(Patient.id.desc()).first()
-        if last_patient and last_patient.patient_id:
-            last_num = int(last_patient.patient_id.split('-')[1])
-            new_num = last_num + 1
-        else:
-            new_num = 1
-        return f"PAT-{new_num:04d}"
+        """
+        Generate unique patient ID for a clinic
+        Format: PAT-0001, PAT-0002, etc.
+        Handles gaps from deleted patients and ensures uniqueness
+        """
+        # Get all existing patient IDs for this clinic
+        existing_patients = Patient.query.filter_by(clinic_id=clinic_id).all()
+        existing_ids = {p.patient_id for p in existing_patients if p.patient_id}
+        
+        # Find the highest number currently in use
+        max_num = 0
+        for patient_id in existing_ids:
+            try:
+                num = int(patient_id.split('-')[1])
+                max_num = max(max_num, num)
+            except (IndexError, ValueError):
+                continue
+        
+        # Generate new IDs starting from max_num + 1
+        # Keep trying until we find one that doesn't exist (handles edge cases)
+        attempt = 0
+        while attempt < 10000:  # Safety limit
+            new_num = max_num + 1 + attempt
+            new_id = f"PAT-{new_num:04d}"
+            
+            # Check if this ID already exists
+            if new_id not in existing_ids:
+                return new_id
+            
+            attempt += 1
+        
+        # Fallback: use timestamp-based ID (should never reach here)
+        import time
+        return f"PAT-{int(time.time()) % 100000:05d}"
 
 
 class Appointment(db.Model):
@@ -161,4 +187,5 @@ class Consultation(db.Model):
     
     # Relationships
     clinic = db.relationship('Clinic', backref='consultations')
+
 
