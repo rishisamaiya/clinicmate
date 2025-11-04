@@ -269,3 +269,35 @@ class Medicine(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class MedicineMaster(db.Model):
+    """Master list of medicines for autocomplete suggestions"""
+    __tablename__ = 'medicine_master'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    clinic_id = db.Column(db.Integer, db.ForeignKey('clinics.id'), nullable=False)
+    
+    # Medicine details
+    name = db.Column(db.String(200), nullable=False)  # Medicine name
+    generic_name = db.Column(db.String(200))  # Generic/salt name (optional)
+    common_dosage = db.Column(db.String(100))  # Most common dosage used
+    common_frequency = db.Column(db.String(50))  # Most common frequency
+    common_duration = db.Column(db.String(50))  # Most common duration
+    common_timing = db.Column(db.String(50))  # Most common timing
+    category = db.Column(db.String(100))  # E.g., Antibiotic, Painkiller, etc.
+    
+    # Usage tracking
+    usage_count = db.Column(db.Integer, default=1)  # How many times prescribed
+    last_used = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    clinic = db.relationship('Clinic', backref='medicine_library')
+    
+    # Unique constraint: one medicine name per clinic
+    __table_args__ = (
+        db.UniqueConstraint('clinic_id', 'name', name='unique_medicine_per_clinic'),
+    )
+
+

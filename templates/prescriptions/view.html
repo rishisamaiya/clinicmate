@@ -6,8 +6,38 @@
 <style>
     @media print {
         .header, .no-print { display: none !important; }
-        .card { box-shadow: none; border: 1px solid #ddd; }
-        body { background: white; }
+        .card { 
+            box-shadow: none; 
+            border: 1px solid #ddd;
+            padding: 15px !important;
+            margin: 0 !important;
+        }
+        body { 
+            background: white;
+            margin: 0;
+            padding: 10px;
+        }
+        .container {
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        /* Compact spacing for print */
+        h1, h2, h3 { margin: 5px 0 !important; }
+        p { margin: 3px 0 !important; }
+        .patient-details { padding: 8px !important; margin: 8px 0 !important; }
+        .diagnosis-section { margin: 8px 0 !important; }
+        .prescription-box { padding: 10px !important; margin: 10px 0 !important; }
+        .medicine-table { margin: 10px 0 !important; }
+        .medicine-table th, .medicine-table td { padding: 6px 8px !important; font-size: 12px !important; }
+        .rx-symbol { font-size: 32px !important; margin: 0 !important; }
+        .signature-section { margin-top: 20px !important; }
+        .footer-info { margin-top: 15px !important; padding-top: 10px !important; font-size: 10px !important; }
+        /* Prevent page breaks */
+        .prescription-box { page-break-inside: avoid; }
+        .medicine-table { page-break-inside: avoid; }
+        /* Reduce header spacing */
+        .prescription-header { padding-bottom: 8px !important; margin-bottom: 10px !important; }
     }
     
     .medicine-table {
@@ -52,17 +82,17 @@
     </div>
     
     <!-- Prescription Header -->
-    <div style="text-align: center; border-bottom: 2px solid #667eea; padding-bottom: 15px; margin: 20px 0;">
-        <h1 style="margin: 0; color: #667eea;">{{ session.clinic_name }}</h1>
-        <p style="margin: 5px 0;">Dr. {{ session.doctor_name }}</p>
-        <p style="font-size: 14px; color: #666;">
+    <div class="prescription-header" style="text-align: center; border-bottom: 2px solid #667eea; padding-bottom: 15px; margin: 20px 0;">
+        <h1 style="margin: 0; color: #667eea; font-size: 22px;">{{ session.clinic_name }}</h1>
+        <p style="margin: 5px 0; font-size: 14px;">Dr. {{ session.doctor_name }}</p>
+        <p style="font-size: 12px; color: #666; margin: 3px 0;">
             Date: {{ prescription.created_at.strftime('%d-%B-%Y %I:%M %p') }}
         </p>
     </div>
     
     <!-- Patient Details -->
-    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="patient-details" style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <div>
                 <strong>Patient Name:</strong> {{ prescription.patient.name }}<br>
                 <strong>Patient ID:</strong> {{ prescription.patient.patient_id }}<br>
@@ -80,18 +110,18 @@
     
     <!-- Diagnosis -->
     {% if prescription.diagnosis %}
-    <div style="margin-bottom: 20px;">
-        <strong style="font-size: 16px;">Diagnosis:</strong>
-        <p style="margin: 5px 0 0 20px; font-size: 15px;">{{ prescription.diagnosis }}</p>
+    <div class="diagnosis-section" style="margin-bottom: 15px;">
+        <strong style="font-size: 14px;">Diagnosis:</strong>
+        <p style="margin: 3px 0 0 15px; font-size: 13px;">{{ prescription.diagnosis }}</p>
     </div>
     {% endif %}
     
     <!-- Medicines -->
     {% if prescription.medicines %}
-    <div style="border: 2px solid #667eea; border-radius: 8px; padding: 20px; margin: 20px 0;">
-        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+    <div class="prescription-box" style="border: 2px solid #667eea; border-radius: 8px; padding: 12px; margin: 15px 0;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
             <span class="rx-symbol">℞</span>
-            <h3 style="color: #667eea; margin: 0;">Prescription</h3>
+            <h3 style="color: #667eea; margin: 0; font-size: 16px;">Prescription</h3>
         </div>
         
         <table class="medicine-table">
@@ -129,9 +159,9 @@
     
     <!-- Notes/Advice -->
     {% if prescription.notes %}
-    <div style="margin: 20px 0;">
-        <strong style="font-size: 16px;">Advice / Instructions:</strong>
-        <div style="margin: 10px 0 0 20px; padding: 15px; background: #f8f9fa; border-left: 4px solid #667eea; border-radius: 5px;">
+    <div style="margin: 12px 0;">
+        <strong style="font-size: 14px;">Advice / Instructions:</strong>
+        <div style="margin: 5px 0 0 15px; padding: 10px; background: #f8f9fa; border-left: 4px solid #667eea; border-radius: 5px; font-size: 12px;">
             {{ prescription.notes }}
         </div>
     </div>
@@ -139,30 +169,30 @@
     
     <!-- Follow-up -->
     {% if prescription.follow_up_date %}
-    <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+    <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin: 12px 0; font-size: 13px;">
         <strong>📅 Follow-up:</strong> {{ prescription.follow_up_date.strftime('%d-%B-%Y') }}
         {% if prescription.follow_up_notes %}
-        <br><small>{{ prescription.follow_up_notes }}</small>
+        <br><small style="font-size: 11px;">{{ prescription.follow_up_notes }}</small>
         {% endif %}
     </div>
     {% endif %}
     
     <!-- Doctor Signature -->
-    <div style="margin-top: 50px; text-align: right;">
-        <p style="margin: 0;">________________________________</p>
-        <p style="margin: 5px 0 0 0;"><strong>Dr. {{ session.doctor_name }}</strong></p>
+    <div class="signature-section" style="margin-top: 30px; text-align: right;">
+        <p style="margin: 0; font-size: 13px;">________________________________</p>
+        <p style="margin: 3px 0 0 0; font-size: 13px;"><strong>Dr. {{ session.doctor_name }}</strong></p>
         {% if prescription.clinic.registration_number %}
-        <p style="margin: 0; font-size: 12px; color: #666;">Reg. No: {{ prescription.clinic.registration_number }}</p>
+        <p style="margin: 0; font-size: 11px; color: #666;">Reg. No: {{ prescription.clinic.registration_number }}</p>
         {% endif %}
     </div>
     
     <!-- Footer Info -->
-    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666;">
-        <p style="margin: 5px 0;">{{ prescription.clinic.clinic_name }}</p>
+    <div class="footer-info" style="text-align: center; margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 11px; color: #666;">
+        <p style="margin: 3px 0;">{{ prescription.clinic.clinic_name }}</p>
         {% if prescription.clinic.address %}
-        <p style="margin: 5px 0;">{{ prescription.clinic.address }}</p>
+        <p style="margin: 3px 0;">{{ prescription.clinic.address }}</p>
         {% endif %}
-        <p style="margin: 5px 0;">Phone: {{ prescription.clinic.phone }} | Email: {{ prescription.clinic.email }}</p>
+        <p style="margin: 3px 0;">Phone: {{ prescription.clinic.phone }} | Email: {{ prescription.clinic.email }}</p>
     </div>
     
     <!-- Action Buttons -->

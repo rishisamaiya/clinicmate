@@ -93,6 +93,57 @@
         font-weight: bold;
         margin-bottom: 10px;
     }
+    
+    /* Autocomplete Styles */
+    .autocomplete-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-top: none;
+        border-radius: 0 0 5px 5px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .autocomplete-item {
+        padding: 10px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .autocomplete-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+    
+    .autocomplete-item strong {
+        color: #667eea;
+        display: block;
+        margin-bottom: 3px;
+    }
+    
+    .autocomplete-item small {
+        color: #666;
+        font-size: 11px;
+    }
+    
+    .autocomplete-item .usage-badge {
+        background: #28a745;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        margin-left: 5px;
+    }
 </style>
 
 <script>
@@ -108,10 +159,16 @@ function addMedicine() {
         <button type="button" class="remove-btn" onclick="removeMedicine(${medicineIndex})" title="Remove Medicine">×</button>
         <div class="medicine-number">Medicine ${medicineIndex + 1}</div>
         
-        <div class="form-group" style="margin-bottom: 15px;">
+        <div class="form-group" style="margin-bottom: 15px; position: relative;">
             <label>Medicine Name *</label>
-            <input type="text" name="medicine_name_${medicineIndex}" required
-                   placeholder="E.g., Paracetamol, Amoxicillin, Cetrizine">
+            <input type="text" name="medicine_name_${medicineIndex}" 
+                   id="medicine_name_${medicineIndex}"
+                   class="medicine-name-input" required
+                   placeholder="E.g., Paracetamol, Amoxicillin, Cetrizine"
+                   autocomplete="off"
+                   onkeyup="searchMedicine(${medicineIndex})"
+                   onfocus="this.select()">
+            <div id="suggestions_${medicineIndex}" class="autocomplete-suggestions"></div>
         </div>
         
         <div class="form-row" style="gap: 15px; margin-bottom: 15px;">
@@ -183,6 +240,133 @@ function updateMedicineNumbers() {
         }
     });
 }
+
+// Medicine autocomplete functionality
+let searchTimeout = null;
+let currentFocusIndex = {};
+
+function searchMedicine(index) {
+    const input = document.getElementById(`medicine_name_${index}`);
+    const query = input.value.trim();
+    const suggestionsDiv = document.getElementById(`suggestions_${index}`);
+    
+    // Clear previous timeout
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+    
+    // Hide suggestions if query is too short
+    if (query.length < 2) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    
+    // Debounce search
+    searchTimeout = setTimeout(() => {
+        fetch(`/api/medicines/search?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    showSuggestions(index, data);
+                } else {
+                    suggestionsDiv.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching medicines:', error);
+            });
+    }, 300);
+}
+
+function showSuggestions(index, medicines) {
+    const suggestionsDiv = document.getElementById(`suggestions_${index}`);
+    suggestionsDiv.innerHTML = '';
+    
+    medicines.forEach((medicine, idx) => {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        
+        let html = `<strong>${medicine.name}</strong>`;
+        
+        if (medicine.usage_count > 0) {
+            html += `<span class="usage-badge">Used ${medicine.usage_count}x</span>`;
+        }
+        
+        const details = [];
+        if (medicine.common_dosage) details.push(medicine.common_dosage);
+        if (medicine.common_frequency) details.push(medicine.common_frequency);
+        if (medicine.common_duration) details.push(medicine.common_duration);
+        
+        if (details.length > 0) {
+            html += `<br><small>${details.join(' • ')}</small>`;
+        }
+        
+        item.innerHTML = html;
+        item.onclick = () => selectMedicine(index, medicine);
+        suggestionsDiv.appendChild(item);
+    });
+    
+    suggestionsDiv.style.display = 'block';
+}
+
+function selectMedicine(index, medicine) {
+    // Fill medicine name
+    document.getElementById(`medicine_name_${index}`).value = medicine.name;
+    
+    // Auto-fill other fields if available
+    if (medicine.common_dosage) {
+        document.querySelector(`input[name="medicine_dosage_${index}"]`).value = medicine.common_dosage;
+    }
+    if (medicine.common_frequency) {
+        document.querySelector(`input[name="medicine_frequency_${index}"]`).value = medicine.common_frequency;
+    }
+    if (medicine.common_duration) {
+        document.querySelector(`input[name="medicine_duration_${index}"]`).value = medicine.common_duration;
+    }
+    if (medicine.common_timing) {
+        document.querySelector(`select[name="medicine_timing_${index}"]`).value = medicine.common_timing;
+    }
+    
+    // Hide suggestions
+    document.getElementById(`suggestions_${index}`).style.display = 'none';
+}
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.classList.contains('medicine-name-input')) {
+        document.querySelectorAll('.autocomplete-suggestions').forEach(div => {
+            div.style.display = 'none';
+        });
+    }
+});
+
+// Save medicines to master list when form is submitted
+document.getElementById('prescriptionForm').addEventListener('submit', function(e) {
+    // Get all medicine names
+    const medicineNames = document.querySelectorAll('[name^="medicine_name_"]');
+    
+    medicineNames.forEach((input, idx) => {
+        const name = input.value.trim();
+        if (name) {
+            // Save to medicine master asynchronously
+            const medicineData = {
+                name: name,
+                dosage: document.querySelector(`[name="medicine_dosage_${idx}"]`)?.value || '',
+                frequency: document.querySelector(`[name="medicine_frequency_${idx}"]`)?.value || '',
+                duration: document.querySelector(`[name="medicine_duration_${idx}"]`)?.value || '',
+                timing: document.querySelector(`[name="medicine_timing_${idx}"]`)?.value || ''
+            };
+            
+            fetch('/api/medicines/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(medicineData)
+            }).catch(error => console.error('Error saving medicine:', error));
+        }
+    });
+});
 
 // Add at least one medicine by default
 window.addEventListener('DOMContentLoaded', function() {

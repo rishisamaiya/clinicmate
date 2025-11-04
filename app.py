@@ -2,8 +2,8 @@
 Clinic Management System - Simple Prototype
 A basic healthcare management system for small clinics
 """
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from models import db, Clinic, Patient, Appointment, Consultation, Prescription, Medicine
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from models import db, Clinic, Patient, Appointment, Consultation, Prescription, Medicine, MedicineMaster
 from datetime import datetime, date, timedelta
 import os
 
@@ -581,6 +581,99 @@ def delete_prescription(prescription_id):
         flash(f'Error: {str(e)}', 'error')
     
     return redirect(url_for('prescriptions'))
+
+
+# ==================== MEDICINE AUTOCOMPLETE API ====================
+
+@app.route('/api/medicines/search')
+@login_required
+def search_medicines():
+    """Search medicines for autocomplete"""
+    clinic_id = session['clinic_id']
+    query = request.args.get('q', '').strip()
+    
+    if not query or len(query) < 2:
+        return jsonify([])
+    
+    # Search in medicine master (case-insensitive)
+    medicines = MedicineMaster.query.filter_by(clinic_id=clinic_id).filter(
+        db.or_(
+            MedicineMaster.name.ilike(f'{query}%'),
+            MedicineMaster.name.ilike(f'%{query}%')
+        )
+    ).order_by(
+        MedicineMaster.usage_count.desc(),
+        MedicineMaster.name
+    ).limit(10).all()
+    
+    results = []
+    for med in medicines:
+        results.append({
+            'name': med.name,
+            'generic_name': med.generic_name,
+            'common_dosage': med.common_dosage,
+            'common_frequency': med.common_frequency,
+            'common_duration': med.common_duration,
+            'common_timing': med.common_timing,
+            'usage_count': med.usage_count
+        })
+    
+    return jsonify(results)
+
+
+@app.route('/api/medicines/add', methods=['POST'])
+@login_required
+def add_medicine_to_master():
+    """Add or update medicine in master list"""
+    clinic_id = session['clinic_id']
+    data = request.get_json()
+    
+    medicine_name = data.get('name', '').strip()
+    if not medicine_name:
+        return jsonify({'success': False, 'error': 'Medicine name required'}), 400
+    
+    try:
+        # Check if medicine already exists
+        medicine = MedicineMaster.query.filter_by(
+            clinic_id=clinic_id,
+            name=medicine_name
+        ).first()
+        
+        if medicine:
+            # Update usage count and last used
+            medicine.usage_count += 1
+            medicine.last_used = datetime.utcnow()
+            
+            # Update common values if provided
+            if data.get('dosage'):
+                medicine.common_dosage = data.get('dosage')
+            if data.get('frequency'):
+                medicine.common_frequency = data.get('frequency')
+            if data.get('duration'):
+                medicine.common_duration = data.get('duration')
+            if data.get('timing'):
+                medicine.common_timing = data.get('timing')
+        else:
+            # Create new medicine entry
+            medicine = MedicineMaster(
+                clinic_id=clinic_id,
+                name=medicine_name,
+                generic_name=data.get('generic_name'),
+                common_dosage=data.get('dosage'),
+                common_frequency=data.get('frequency'),
+                common_duration=data.get('duration'),
+                common_timing=data.get('timing'),
+                category=data.get('category'),
+                usage_count=1
+            )
+            db.session.add(medicine)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Medicine added to library'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 if __name__ == '__main__':
