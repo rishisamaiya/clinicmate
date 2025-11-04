@@ -6,8 +6,13 @@ A simple, easy-to-use clinic management system for small medical practices.
 
 - **Patient Management**: Register and maintain patient records
 - **Appointment Scheduling**: Book and manage appointments
-- **Consultation Records**: Record vitals, diagnosis, and prescriptions
-- **Digital Prescriptions**: Generate printable prescriptions
+- **Consultation Records**: Record vitals, diagnosis, and observations
+- **💊 Prescription Management** (NEW): 
+  - Structured medicine entries with dosage, frequency, duration
+  - Professional printable prescriptions
+  - Search and track all prescriptions
+  - Edit and update prescriptions
+  - Link to consultations or create standalone
 - **Dashboard**: Quick overview of daily activities
 - **Simple Billing**: Track consultation fees and payments
 
@@ -85,6 +90,9 @@ This is a local file-based database - perfect for prototyping and testing.
 3. **Patients** - List, add, and view patient details
 4. **Appointments** - Schedule and manage appointments
 5. **Consultations** - Record consultation and generate prescription
+6. **💊 Prescriptions** (NEW) - Create, view, edit, and print prescriptions
+
+📄 **See [PRESCRIPTION_FEATURE.md](PRESCRIPTION_FEATURE.md) for detailed prescription documentation**
 
 ## 🔐 Security Note
 
@@ -114,4 +122,5 @@ Customize as needed based on your requirements!
 ---
 
 **Built with ❤️ for healthcare professionals**
+
 

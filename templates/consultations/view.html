@@ -118,9 +118,12 @@
     
     <!-- Buttons -->
     <div style="text-align: center; margin-top: 30px;" class="no-print">
+        <a href="{{ url_for('new_prescription', patient_id=consultation.patient_id, consultation_id=consultation.id) }}" 
+           class="btn">💊 Create Detailed Prescription</a>
         <a href="{{ url_for('view_patient', patient_id=consultation.patient_id) }}" class="btn btn-secondary">View Patient Profile</a>
         <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
     </div>
 </div>
 {% endblock %}
+
 

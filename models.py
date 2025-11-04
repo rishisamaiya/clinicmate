@@ -178,7 +178,7 @@ class Consultation(db.Model):
     chief_complaint = db.Column(db.Text)
     symptoms = db.Column(db.Text)
     diagnosis = db.Column(db.Text)
-    prescription = db.Column(db.Text)  # JSON format for medicines
+    prescription = db.Column(db.Text)  # Legacy text field (kept for backward compatibility)
     investigation = db.Column(db.Text)  # Tests advised
     treatment_plan = db.Column(db.Text)
     
@@ -198,5 +198,74 @@ class Consultation(db.Model):
     
     # Relationships
     clinic = db.relationship('Clinic', backref='consultations')
+    prescriptions = db.relationship('Prescription', backref='consultation', lazy=True)
+
+
+class Prescription(db.Model):
+    """Prescription records with structured medicine data"""
+    __tablename__ = 'prescriptions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    clinic_id = db.Column(db.Integer, db.ForeignKey('clinics.id'), nullable=False)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
+    consultation_id = db.Column(db.Integer, db.ForeignKey('consultations.id'))
+    
+    # Prescription details
+    prescription_number = db.Column(db.String(50), unique=True)  # e.g., RX-0001
+    diagnosis = db.Column(db.Text)
+    notes = db.Column(db.Text)  # General advice, precautions
+    
+    # Follow-up
+    follow_up_date = db.Column(db.Date)
+    follow_up_notes = db.Column(db.Text)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    clinic = db.relationship('Clinic', backref='prescriptions')
+    patient = db.relationship('Patient', backref='prescriptions')
+    medicines = db.relationship('Medicine', backref='prescription', lazy=True, cascade='all, delete-orphan')
+    
+    @staticmethod
+    def generate_prescription_number(clinic_id):
+        """Generate unique prescription number for a clinic"""
+        # Get all existing prescription numbers for this clinic
+        existing = Prescription.query.filter_by(clinic_id=clinic_id).all()
+        existing_ids = {p.prescription_number for p in existing if p.prescription_number}
+        
+        # Find the highest number
+        max_num = 0
+        for rx_id in existing_ids:
+            try:
+                num = int(rx_id.split('-')[1])
+                max_num = max(max_num, num)
+            except (IndexError, ValueError):
+                continue
+        
+        # Generate new number
+        new_num = max_num + 1
+        return f"RX-{new_num:04d}"
+
+
+class Medicine(db.Model):
+    """Individual medicine entries in a prescription"""
+    __tablename__ = 'medicines'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    prescription_id = db.Column(db.Integer, db.ForeignKey('prescriptions.id'), nullable=False)
+    
+    # Medicine details
+    name = db.Column(db.String(200), nullable=False)  # e.g., Paracetamol
+    dosage = db.Column(db.String(100))  # e.g., 650mg, 5ml
+    frequency = db.Column(db.String(50))  # e.g., 1-0-1, 1-1-1, 0-0-1
+    duration = db.Column(db.String(50))  # e.g., 5 days, 1 week, 10 days
+    timing = db.Column(db.String(50))  # e.g., Before food, After food, Empty stomach
+    instructions = db.Column(db.Text)  # Additional instructions
+    
+    # Metadata
+    order = db.Column(db.Integer, default=0)  # For ordering medicines in the prescription
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 

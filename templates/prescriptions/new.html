@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}New Prescription - {{ patient.name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>💊 New Prescription - {{ patient.name }}</h2>
+    <p>Patient ID: {{ patient.patient_id }} | Age: {{ patient.age }}Y | Gender: {{ patient.gender }}</p>
+    
+    {% if patient.allergies %}
+    <div style="margin: 15px 0; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+        <strong>⚠️ Allergies:</strong> {{ patient.allergies }}
+    </div>
+    {% endif %}
+    
+    <form method="POST" id="prescriptionForm">
+        <div class="form-group">
+            <label for="diagnosis">Diagnosis *</label>
+            <input type="text" id="diagnosis" name="diagnosis" required
+                   value="{% if consultation %}{{ consultation.diagnosis }}{% endif %}"
+                   placeholder="E.g., Viral Fever, Upper Respiratory Tract Infection">
+        </div>
+        
+        <!-- Medicines Section -->
+        <div style="margin: 30px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="color: #667eea; margin: 0;">℞ Medicines</h3>
+                <button type="button" class="btn btn-success" onclick="addMedicine()" style="padding: 8px 15px;">
+                    ➕ Add Medicine
+                </button>
+            </div>
+            
+            <div id="medicinesContainer">
+                <!-- Medicines will be added here dynamically -->
+            </div>
+            
+            <input type="hidden" name="medicine_count" id="medicine_count" value="0">
+        </div>
+        
+        <div class="form-group">
+            <label for="notes">Advice / Instructions</label>
+            <textarea id="notes" name="notes" 
+                      placeholder="General advice, precautions, dietary instructions..."></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="follow_up_date">Follow-up Date (if needed)</label>
+            <input type="date" id="follow_up_date" name="follow_up_date">
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <button type="submit" class="btn">💾 Save Prescription</button>
+            <a href="{{ url_for('view_patient', patient_id=patient.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .medicine-card {
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        position: relative;
+    }
+    
+    .medicine-card .remove-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+    }
+    
+    .medicine-card .remove-btn:hover {
+        background: #c82333;
+    }
+    
+    .medicine-number {
+        display: inline-block;
+        background: #667eea;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 5px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+</style>
+
+<script>
+let medicineIndex = 0;
+
+function addMedicine() {
+    const container = document.getElementById('medicinesContainer');
+    const medicineCard = document.createElement('div');
+    medicineCard.className = 'medicine-card';
+    medicineCard.id = `medicine-${medicineIndex}`;
+    
+    medicineCard.innerHTML = `
+        <button type="button" class="remove-btn" onclick="removeMedicine(${medicineIndex})" title="Remove Medicine">×</button>
+        <div class="medicine-number">Medicine ${medicineIndex + 1}</div>
+        
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label>Medicine Name *</label>
+            <input type="text" name="medicine_name_${medicineIndex}" required
+                   placeholder="E.g., Paracetamol, Amoxicillin, Cetrizine">
+        </div>
+        
+        <div class="form-row" style="gap: 15px; margin-bottom: 15px;">
+            <div class="form-group" style="margin: 0;">
+                <label>Dosage</label>
+                <input type="text" name="medicine_dosage_${medicineIndex}"
+                       placeholder="E.g., 650mg, 500mg, 10ml">
+            </div>
+            
+            <div class="form-group" style="margin: 0;">
+                <label>Frequency</label>
+                <input type="text" name="medicine_frequency_${medicineIndex}"
+                       placeholder="E.g., 1-0-1, 1-1-1, 0-0-1">
+            </div>
+        </div>
+        
+        <div class="form-row" style="gap: 15px; margin-bottom: 15px;">
+            <div class="form-group" style="margin: 0;">
+                <label>Duration</label>
+                <input type="text" name="medicine_duration_${medicineIndex}"
+                       placeholder="E.g., 5 days, 1 week">
+            </div>
+            
+            <div class="form-group" style="margin: 0;">
+                <label>Timing</label>
+                <select name="medicine_timing_${medicineIndex}">
+                    <option value="">Select timing</option>
+                    <option value="After food">After food</option>
+                    <option value="Before food">Before food</option>
+                    <option value="With food">With food</option>
+                    <option value="Empty stomach">Empty stomach</option>
+                    <option value="Anytime">Anytime</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group" style="margin: 0;">
+            <label>Special Instructions</label>
+            <input type="text" name="medicine_instructions_${medicineIndex}"
+                   placeholder="E.g., Take with plenty of water, Avoid alcohol">
+        </div>
+    `;
+    
+    container.appendChild(medicineCard);
+    medicineIndex++;
+    updateMedicineCount();
+}
+
+function removeMedicine(index) {
+    const medicineCard = document.getElementById(`medicine-${index}`);
+    if (medicineCard) {
+        medicineCard.remove();
+        updateMedicineCount();
+        updateMedicineNumbers();
+    }
+}
+
+function updateMedicineCount() {
+    const count = document.querySelectorAll('.medicine-card').length;
+    document.getElementById('medicine_count').value = medicineIndex;
+}
+
+function updateMedicineNumbers() {
+    const cards = document.querySelectorAll('.medicine-card');
+    cards.forEach((card, index) => {
+        const numberDiv = card.querySelector('.medicine-number');
+        if (numberDiv) {
+            numberDiv.textContent = `Medicine ${index + 1}`;
+        }
+    });
+}
+
+// Add at least one medicine by default
+window.addEventListener('DOMContentLoaded', function() {
+    addMedicine();
+});
+</script>
+{% endblock %}
+

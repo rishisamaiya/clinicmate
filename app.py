@@ -3,7 +3,7 @@ Clinic Management System - Simple Prototype
 A basic healthcare management system for small clinics
 """
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-from models import db, Clinic, Patient, Appointment, Consultation
+from models import db, Clinic, Patient, Appointment, Consultation, Prescription, Medicine
 from datetime import datetime, date, timedelta
 import os
 
@@ -394,6 +394,193 @@ def view_consultation(consultation_id):
     ).first_or_404()
     
     return render_template('consultations/view.html', consultation=consultation)
+
+
+# ==================== PRESCRIPTION ROUTES ====================
+
+@app.route('/prescriptions')
+@login_required
+def prescriptions():
+    """List all prescriptions"""
+    clinic_id = session['clinic_id']
+    search = request.args.get('search', '')
+    
+    if search:
+        # Search by patient name, prescription number, or diagnosis
+        prescriptions_list = Prescription.query.filter_by(clinic_id=clinic_id).join(Patient).filter(
+            (Patient.name.ilike(f'%{search}%')) | 
+            (Prescription.prescription_number.ilike(f'%{search}%')) |
+            (Prescription.diagnosis.ilike(f'%{search}%'))
+        ).order_by(Prescription.created_at.desc()).all()
+    else:
+        prescriptions_list = Prescription.query.filter_by(clinic_id=clinic_id).order_by(
+            Prescription.created_at.desc()
+        ).limit(100).all()
+    
+    return render_template('prescriptions/list.html', prescriptions=prescriptions_list, search=search)
+
+
+@app.route('/prescriptions/new/<int:patient_id>', methods=['GET', 'POST'])
+@login_required
+def new_prescription(patient_id):
+    """Create new prescription"""
+    clinic_id = session['clinic_id']
+    patient = Patient.query.filter_by(id=patient_id, clinic_id=clinic_id).first_or_404()
+    
+    # Get consultation_id if passed
+    consultation_id = request.args.get('consultation_id', type=int)
+    consultation = None
+    if consultation_id:
+        consultation = Consultation.query.filter_by(
+            id=consultation_id,
+            clinic_id=clinic_id
+        ).first()
+    
+    if request.method == 'POST':
+        try:
+            # Generate prescription number
+            prescription_number = Prescription.generate_prescription_number(clinic_id)
+            
+            # Create prescription
+            prescription = Prescription(
+                clinic_id=clinic_id,
+                patient_id=patient_id,
+                consultation_id=consultation_id,
+                prescription_number=prescription_number,
+                diagnosis=request.form.get('diagnosis'),
+                notes=request.form.get('notes')
+            )
+            
+            # Follow-up date if provided
+            if request.form.get('follow_up_date'):
+                prescription.follow_up_date = datetime.strptime(
+                    request.form.get('follow_up_date'), '%Y-%m-%d'
+                ).date()
+            
+            db.session.add(prescription)
+            db.session.flush()  # Get prescription.id
+            
+            # Add medicines
+            medicine_count = int(request.form.get('medicine_count', 0))
+            for i in range(medicine_count):
+                name = request.form.get(f'medicine_name_{i}')
+                if name and name.strip():  # Only add if name is provided
+                    medicine = Medicine(
+                        prescription_id=prescription.id,
+                        name=name,
+                        dosage=request.form.get(f'medicine_dosage_{i}'),
+                        frequency=request.form.get(f'medicine_frequency_{i}'),
+                        duration=request.form.get(f'medicine_duration_{i}'),
+                        timing=request.form.get(f'medicine_timing_{i}'),
+                        instructions=request.form.get(f'medicine_instructions_{i}'),
+                        order=i
+                    )
+                    db.session.add(medicine)
+            
+            db.session.commit()
+            
+            flash(f'✅ Prescription {prescription.prescription_number} created successfully!', 'success')
+            return redirect(url_for('view_prescription', prescription_id=prescription.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'❌ Error: {str(e)}', 'error')
+    
+    return render_template('prescriptions/new.html', 
+                         patient=patient,
+                         consultation=consultation)
+
+
+@app.route('/prescriptions/<int:prescription_id>')
+@login_required
+def view_prescription(prescription_id):
+    """View prescription details / Print"""
+    clinic_id = session['clinic_id']
+    prescription = Prescription.query.filter_by(
+        id=prescription_id,
+        clinic_id=clinic_id
+    ).first_or_404()
+    
+    return render_template('prescriptions/view.html', prescription=prescription)
+
+
+@app.route('/prescriptions/<int:prescription_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_prescription(prescription_id):
+    """Edit existing prescription"""
+    clinic_id = session['clinic_id']
+    prescription = Prescription.query.filter_by(
+        id=prescription_id,
+        clinic_id=clinic_id
+    ).first_or_404()
+    
+    if request.method == 'POST':
+        try:
+            # Update prescription details
+            prescription.diagnosis = request.form.get('diagnosis')
+            prescription.notes = request.form.get('notes')
+            prescription.updated_at = datetime.utcnow()
+            
+            # Follow-up date
+            if request.form.get('follow_up_date'):
+                prescription.follow_up_date = datetime.strptime(
+                    request.form.get('follow_up_date'), '%Y-%m-%d'
+                ).date()
+            else:
+                prescription.follow_up_date = None
+            
+            # Delete existing medicines
+            Medicine.query.filter_by(prescription_id=prescription.id).delete()
+            
+            # Add updated medicines
+            medicine_count = int(request.form.get('medicine_count', 0))
+            for i in range(medicine_count):
+                name = request.form.get(f'medicine_name_{i}')
+                if name and name.strip():
+                    medicine = Medicine(
+                        prescription_id=prescription.id,
+                        name=name,
+                        dosage=request.form.get(f'medicine_dosage_{i}'),
+                        frequency=request.form.get(f'medicine_frequency_{i}'),
+                        duration=request.form.get(f'medicine_duration_{i}'),
+                        timing=request.form.get(f'medicine_timing_{i}'),
+                        instructions=request.form.get(f'medicine_instructions_{i}'),
+                        order=i
+                    )
+                    db.session.add(medicine)
+            
+            db.session.commit()
+            
+            flash(f'✅ Prescription {prescription.prescription_number} updated successfully!', 'success')
+            return redirect(url_for('view_prescription', prescription_id=prescription.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'❌ Error: {str(e)}', 'error')
+    
+    return render_template('prescriptions/edit.html', prescription=prescription)
+
+
+@app.route('/prescriptions/<int:prescription_id>/delete', methods=['POST'])
+@login_required
+def delete_prescription(prescription_id):
+    """Delete prescription"""
+    clinic_id = session['clinic_id']
+    prescription = Prescription.query.filter_by(
+        id=prescription_id,
+        clinic_id=clinic_id
+    ).first_or_404()
+    
+    try:
+        prescription_number = prescription.prescription_number
+        db.session.delete(prescription)
+        db.session.commit()
+        flash(f'Prescription {prescription_number} deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'error')
+    
+    return redirect(url_for('prescriptions'))
 
 
 if __name__ == '__main__':

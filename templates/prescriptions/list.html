@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Prescriptions{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>💊 Prescriptions</h2>
+        <div>
+            <a href="{{ url_for('patients') }}" class="btn btn-success">➕ New Prescription</a>
+        </div>
+    </div>
+    
+    <!-- Search -->
+    <form method="GET" style="margin-bottom: 20px;">
+        <div style="display: flex; gap: 10px;">
+            <input type="text" name="search" placeholder="Search by patient name, prescription number, or diagnosis..." 
+                   value="{{ search }}" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            <button type="submit" class="btn">🔍 Search</button>
+            {% if search %}
+            <a href="{{ url_for('prescriptions') }}" class="btn btn-secondary">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+    
+    {% if prescriptions %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Prescription #</th>
+                <th>Patient</th>
+                <th>Diagnosis</th>
+                <th>Medicines</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prescription in prescriptions %}
+            <tr>
+                <td>
+                    <strong>{{ prescription.prescription_number }}</strong>
+                </td>
+                <td>
+                    <a href="{{ url_for('view_patient', patient_id=prescription.patient_id) }}" 
+                       style="color: #667eea; text-decoration: none;">
+                        {{ prescription.patient.name }}
+                    </a><br>
+                    <small style="color: #666;">{{ prescription.patient.patient_id }}</small>
+                </td>
+                <td>{{ prescription.diagnosis or '-' }}</td>
+                <td>
+                    <strong>{{ prescription.medicines|length }}</strong> medicine(s)
+                </td>
+                <td>
+                    {{ prescription.created_at.strftime('%d-%b-%Y') }}<br>
+                    <small style="color: #666;">{{ prescription.created_at.strftime('%I:%M %p') }}</small>
+                </td>
+                <td>
+                    <a href="{{ url_for('view_prescription', prescription_id=prescription.id) }}" 
+                       class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">View</a>
+                    <a href="{{ url_for('edit_prescription', prescription_id=prescription.id) }}" 
+                       class="btn" style="padding: 5px 10px; font-size: 12px; background: #28a745;">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: #666;">
+        <p style="font-size: 18px; margin-bottom: 10px;">📋 No prescriptions found</p>
+        {% if search %}
+        <p>Try adjusting your search criteria</p>
+        <a href="{{ url_for('prescriptions') }}" class="btn btn-secondary">View All Prescriptions</a>
+        {% else %}
+        <p>Create your first prescription from a patient's profile</p>
+        <a href="{{ url_for('patients') }}" class="btn">View Patients</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
