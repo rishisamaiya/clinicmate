@@ -91,6 +91,11 @@ class Patient(db.Model):
         existing_patients = Patient.query.filter_by(clinic_id=clinic_id).all()
         existing_ids = {p.patient_id for p in existing_patients if p.patient_id}
         
+        # DEBUG: Print what we found
+        print(f"🔍 DEBUG: Clinic ID: {clinic_id}")
+        print(f"🔍 DEBUG: Found {len(existing_patients)} existing patients")
+        print(f"🔍 DEBUG: Existing IDs: {existing_ids}")
+        
         # Find the highest number currently in use
         max_num = 0
         for patient_id in existing_ids:
@@ -99,6 +104,8 @@ class Patient(db.Model):
                 max_num = max(max_num, num)
             except (IndexError, ValueError):
                 continue
+        
+        print(f"🔍 DEBUG: Max number found: {max_num}")
         
         # Generate new IDs starting from max_num + 1
         # Keep trying until we find one that doesn't exist (handles edge cases)
@@ -109,13 +116,17 @@ class Patient(db.Model):
             
             # Check if this ID already exists
             if new_id not in existing_ids:
+                print(f"✅ DEBUG: Generated new ID: {new_id}")
                 return new_id
             
+            print(f"⚠️ DEBUG: ID {new_id} already exists, trying next...")
             attempt += 1
         
         # Fallback: use timestamp-based ID (should never reach here)
         import time
-        return f"PAT-{int(time.time()) % 100000:05d}"
+        fallback_id = f"PAT-{int(time.time()) % 100000:05d}"
+        print(f"⚠️ DEBUG: Using fallback ID: {fallback_id}")
+        return fallback_id
 
 
 class Appointment(db.Model):
