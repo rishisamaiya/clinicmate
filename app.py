@@ -25,9 +25,18 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize database
 db.init_app(app)
 
-# Create tables
-with app.app_context():
-    db.create_all()
+# Create tables (for serverless compatibility)
+def init_db():
+    """Initialize database tables if they don't exist"""
+    with app.app_context():
+        try:
+            db.create_all()
+            print("✅ Database tables initialized")
+        except Exception as e:
+            print(f"⚠️ Database initialization error: {e}")
+
+# Initialize database on first import
+init_db()
 
 # Login required decorator
 def login_required(f):
