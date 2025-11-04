@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - {{ session.clinic_name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>⚙️ Settings & Profile</h2>
+    <p style="color: #666;">Manage your clinic details, password, and preferences</p>
+</div>
+
+<!-- Profile & Clinic Details -->
+<div class="card">
+    <h3 style="color: #667eea; margin-bottom: 20px;">🏥 Clinic & Profile Details</h3>
+    <form method="POST">
+        <input type="hidden" name="action" value="update_profile">
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="clinic_name">Clinic Name *</label>
+                <input type="text" id="clinic_name" name="clinic_name" required
+                       value="{{ clinic.clinic_name }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="doctor_name">Doctor Name *</label>
+                <input type="text" id="doctor_name" name="doctor_name" required
+                       value="{{ clinic.doctor_name }}">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="specialization">Specialization</label>
+                <input type="text" id="specialization" name="specialization"
+                       value="{{ clinic.specialization or '' }}"
+                       placeholder="E.g., General Physician, Pediatrician">
+            </div>
+            
+            <div class="form-group">
+                <label for="registration_number">Medical Registration Number</label>
+                <input type="text" id="registration_number" name="registration_number"
+                       value="{{ clinic.registration_number or '' }}">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="phone">Phone *</label>
+                <input type="tel" id="phone" name="phone" required
+                       value="{{ clinic.phone }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email (Cannot be changed)</label>
+                <input type="email" value="{{ clinic.email }}" readonly
+                       style="background: #f8f9fa; cursor: not-allowed;">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="address">Clinic Address</label>
+            <textarea id="address" name="address" rows="3">{{ clinic.address or '' }}</textarea>
+        </div>
+        
+        <h4 style="color: #667eea; margin: 20px 0 10px;">Consultation Settings</h4>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="consultation_fee">Consultation Fee (₹)</label>
+                <input type="number" id="consultation_fee" name="consultation_fee"
+                       value="{{ clinic.consultation_fee }}" min="0" step="50">
+            </div>
+            
+            <div class="form-group">
+                <label>Working Hours</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="time" name="working_hours_start"
+                           value="{{ clinic.working_hours_start }}" style="width: 45%;">
+                    <span>to</span>
+                    <input type="time" name="working_hours_end"
+                           value="{{ clinic.working_hours_end }}" style="width: 45%;">
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn">💾 Save Profile</button>
+    </form>
+</div>
+
+<!-- Change Password -->
+<div class="card">
+    <h3 style="color: #667eea; margin-bottom: 20px;">🔐 Change Password</h3>
+    <form method="POST">
+        <input type="hidden" name="action" value="change_password">
+        
+        <div class="form-group">
+            <label for="current_password">Current Password *</label>
+            <input type="password" id="current_password" name="current_password" required>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="new_password">New Password *</label>
+                <input type="password" id="new_password" name="new_password" required
+                       minlength="6" placeholder="Minimum 6 characters">
+            </div>
+            
+            <div class="form-group">
+                <label for="confirm_password">Confirm New Password *</label>
+                <input type="password" id="confirm_password" name="confirm_password" required
+                       minlength="6">
+            </div>
+        </div>
+        
+        <button type="submit" class="btn">🔒 Change Password</button>
+    </form>
+</div>
+
+<!-- SMS Reminder Settings (DLT) -->
+<div class="card">
+    <h3 style="color: #667eea; margin-bottom: 10px;">📱 SMS Appointment Reminders (DLT)</h3>
+    <p style="color: #666; margin-bottom: 20px;">Configure SMS gateway for sending appointment reminders to patients</p>
+    
+    <form method="POST">
+        <input type="hidden" name="action" value="update_sms">
+        
+        <div class="form-group">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="checkbox" name="sms_enabled" 
+                       {{ 'checked' if clinic.sms_enabled else '' }}
+                       style="width: auto; margin-right: 10px;">
+                <span>Enable SMS Reminders</span>
+            </label>
+            <small style="color: #666; margin-left: 30px;">
+                Send automatic appointment reminders to patients via SMS
+            </small>
+        </div>
+        
+        <div class="form-group">
+            <label for="sms_api_key">SMS Gateway API Key</label>
+            <input type="password" id="sms_api_key" name="sms_api_key"
+                   value="{{ clinic.sms_api_key or '' }}"
+                   placeholder="Enter your MSG91/Twilio API key">
+            <small style="color: #666;">Your API key from SMS provider (MSG91, Twilio, etc.)</small>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="sms_sender_id">DLT Sender ID</label>
+                <input type="text" id="sms_sender_id" name="sms_sender_id"
+                       value="{{ clinic.sms_sender_id or '' }}"
+                       placeholder="E.g., CLNCMT">
+                <small style="color: #666;">6-character DLT approved sender ID</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="sms_template_id">DLT Template ID</label>
+                <input type="text" id="sms_template_id" name="sms_template_id"
+                       value="{{ clinic.sms_template_id or '' }}"
+                       placeholder="E.g., 1234567890123456789">
+                <small style="color: #666;">Your approved DLT template ID</small>
+            </div>
+        </div>
+        
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <strong style="color: #1976d2;">📋 DLT Registration Guide:</strong>
+            <ol style="margin: 10px 0 0 20px; color: #666;">
+                <li>Register with SMS provider (MSG91, Twilio, etc.)</li>
+                <li>Get your business verified with DLT portal</li>
+                <li>Create and approve SMS template for appointment reminders</li>
+                <li>Get Sender ID (6 characters) and Template ID approved</li>
+                <li>Enter credentials here to enable automated reminders</li>
+            </ol>
+        </div>
+        
+        <button type="submit" class="btn">💾 Save SMS Settings</button>
+    </form>
+</div>
+
+<!-- Account Info -->
+<div class="card" style="background: #f8f9fa;">
+    <h3 style="color: #667eea; margin-bottom: 15px;">ℹ️ Account Information</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div>
+            <strong>Email:</strong> {{ clinic.email }}<br>
+            <strong>Account Created:</strong> {{ clinic.created_at.strftime('%d-%b-%Y') }}<br>
+            <strong>Total Patients:</strong> {{ clinic.patients|length }}
+        </div>
+        <div>
+            <strong>Total Appointments:</strong> {{ clinic.appointments|length }}<br>
+            <strong>Total Prescriptions:</strong> {{ clinic.prescriptions|length }}<br>
+            <strong>Email Verified:</strong> 
+            {% if clinic.email_verified %}
+                <span style="color: #28a745;">✅ Yes</span>
+            {% else %}
+                <span style="color: #dc3545;">❌ No</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 20px;">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+{% endblock %}
+

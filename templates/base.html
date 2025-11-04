@@ -231,8 +231,78 @@
             font-size: 14px;
             margin-top: 5px;
         }
+        
+        /* Profile Dropdown */
+        .profile-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .profile-btn {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .profile-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .profile-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 45px;
+            background: white;
+            min-width: 200px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            overflow: hidden;
+            z-index: 1000;
+        }
+        
+        .profile-menu.show {
+            display: block;
+        }
+        
+        .profile-menu a {
+            display: block;
+            padding: 12px 20px;
+            color: #333;
+            text-decoration: none;
+            transition: background 0.2s;
+            margin: 0;
+            border-radius: 0;
+        }
+        
+        .profile-menu a:hover {
+            background: #f8f9fa;
+        }
     </style>
     {% block extra_css %}{% endblock %}
+    <script>
+        function toggleProfileMenu() {
+            document.getElementById('profileMenu').classList.toggle('show');
+        }
+        
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.matches('.profile-btn')) {
+                var dropdowns = document.getElementsByClassName('profile-menu');
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
+    </script>
 </head>
 <body>
     {% if session.clinic_id %}
@@ -244,7 +314,15 @@
                 <a href="{{ url_for('patients') }}">Patients</a>
                 <a href="{{ url_for('appointments') }}">Appointments</a>
                 <a href="{{ url_for('prescriptions') }}">Prescriptions</a>
-                <a href="{{ url_for('logout') }}">Logout</a>
+                <div class="profile-dropdown">
+                    <button class="profile-btn" onclick="toggleProfileMenu()">
+                        👤 Dr. {{ session.doctor_name }}  ▼
+                    </button>
+                    <div class="profile-menu" id="profileMenu">
+                        <a href="{{ url_for('settings') }}">⚙️ Settings</a>
+                        <a href="{{ url_for('logout') }}">🚪 Logout</a>
+                    </div>
+                </div>
             </nav>
         </div>
     </div>

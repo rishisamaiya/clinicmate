@@ -26,14 +26,26 @@ class Clinic(db.Model):
     # Login
     password_hash = db.Column(db.String(200), nullable=False)
     
+    # Verification
+    email_verified = db.Column(db.Boolean, default=False)
+    verification_token = db.Column(db.String(100))
+    verification_sent_at = db.Column(db.DateTime)
+    
     # Settings
     consultation_fee = db.Column(db.Float, default=300)
     consultation_duration = db.Column(db.Integer, default=15)  # minutes
     working_hours_start = db.Column(db.String(10), default='09:00')
     working_hours_end = db.Column(db.String(10), default='18:00')
     
+    # SMS Settings (for DLT reminders)
+    sms_enabled = db.Column(db.Boolean, default=False)
+    sms_api_key = db.Column(db.String(200))  # Encrypted API key
+    sms_sender_id = db.Column(db.String(20))  # DLT approved sender ID
+    sms_template_id = db.Column(db.String(50))  # DLT template ID
+    
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     patients = db.relationship('Patient', backref='clinic', lazy=True)

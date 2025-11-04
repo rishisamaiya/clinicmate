@@ -117,6 +117,84 @@ def logout():
     return redirect(url_for('login'))
 
 
+# ==================== SETTINGS & PROFILE ====================
+
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    """Clinic settings and profile management"""
+    clinic_id = session['clinic_id']
+    clinic = Clinic.query.get_or_404(clinic_id)
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'update_profile':
+            try:
+                # Update clinic details
+                clinic.clinic_name = request.form.get('clinic_name')
+                clinic.doctor_name = request.form.get('doctor_name')
+                clinic.specialization = request.form.get('specialization')
+                clinic.registration_number = request.form.get('registration_number')
+                clinic.phone = request.form.get('phone')
+                clinic.address = request.form.get('address')
+                clinic.consultation_fee = float(request.form.get('consultation_fee', 300))
+                clinic.working_hours_start = request.form.get('working_hours_start')
+                clinic.working_hours_end = request.form.get('working_hours_end')
+                
+                # Update session
+                session['clinic_name'] = clinic.clinic_name
+                session['doctor_name'] = clinic.doctor_name
+                
+                db.session.commit()
+                flash('Profile updated successfully!', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error updating profile: {str(e)}', 'error')
+        
+        elif action == 'change_password':
+            try:
+                current_password = request.form.get('current_password')
+                new_password = request.form.get('new_password')
+                confirm_password = request.form.get('confirm_password')
+                
+                # Verify current password
+                if not clinic.check_password(current_password):
+                    flash('Current password is incorrect', 'error')
+                elif new_password != confirm_password:
+                    flash('New passwords do not match', 'error')
+                elif len(new_password) < 6:
+                    flash('Password must be at least 6 characters', 'error')
+                else:
+                    clinic.set_password(new_password)
+                    db.session.commit()
+                    flash('Password changed successfully!', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error changing password: {str(e)}', 'error')
+        
+        elif action == 'update_sms':
+            try:
+                clinic.sms_enabled = request.form.get('sms_enabled') == 'on'
+                clinic.sms_sender_id = request.form.get('sms_sender_id')
+                clinic.sms_template_id = request.form.get('sms_template_id')
+                
+                # Only update API key if provided
+                api_key = request.form.get('sms_api_key')
+                if api_key and api_key.strip():
+                    clinic.sms_api_key = api_key
+                
+                db.session.commit()
+                flash('SMS settings updated successfully!', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error updating SMS settings: {str(e)}', 'error')
+        
+        return redirect(url_for('settings'))
+    
+    return render_template('settings.html', clinic=clinic)
+
+
 # ==================== DASHBOARD ====================
 
 @app.route('/dashboard')
