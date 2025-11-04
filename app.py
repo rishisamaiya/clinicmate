@@ -123,20 +123,26 @@ def logout():
 @login_required
 def settings():
     """Clinic settings and profile management"""
-    clinic_id = session['clinic_id']
-    clinic = Clinic.query.get_or_404(clinic_id)
-    
-    # Set defaults for new columns if they don't exist yet (backward compatibility)
-    if not hasattr(clinic, 'email_verified'):
-        clinic.email_verified = True
-    if not hasattr(clinic, 'sms_enabled'):
-        clinic.sms_enabled = False
-    if not hasattr(clinic, 'sms_api_key'):
-        clinic.sms_api_key = None
-    if not hasattr(clinic, 'sms_sender_id'):
-        clinic.sms_sender_id = None
-    if not hasattr(clinic, 'sms_template_id'):
-        clinic.sms_template_id = None
+    try:
+        clinic_id = session['clinic_id']
+        clinic = Clinic.query.get_or_404(clinic_id)
+        
+        # Set defaults for new columns if they don't exist yet (backward compatibility)
+        if not hasattr(clinic, 'email_verified'):
+            clinic.email_verified = True
+        if not hasattr(clinic, 'sms_enabled'):
+            clinic.sms_enabled = False
+        if not hasattr(clinic, 'sms_api_key'):
+            clinic.sms_api_key = None
+        if not hasattr(clinic, 'sms_sender_id'):
+            clinic.sms_sender_id = None
+        if not hasattr(clinic, 'sms_template_id'):
+            clinic.sms_template_id = None
+    except Exception as e:
+        print(f"🔴 ERROR in settings (before POST): {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
     
     if request.method == 'POST':
         action = request.form.get('action')
@@ -204,7 +210,13 @@ def settings():
         
         return redirect(url_for('settings'))
     
-    return render_template('settings.html', clinic=clinic)
+    try:
+        return render_template('settings.html', clinic=clinic)
+    except Exception as e:
+        print(f"🔴 ERROR rendering settings.html: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 # ==================== DASHBOARD ====================
