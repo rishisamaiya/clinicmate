@@ -127,7 +127,7 @@
         <div class="form-group">
             <label style="display: flex; align-items: center; cursor: pointer;">
                 <input type="checkbox" name="sms_enabled" 
-                       {{ 'checked' if (hasattr(clinic, 'sms_enabled') and clinic.sms_enabled) else '' }}
+                       {{ 'checked' if clinic.sms_enabled else '' }}
                        style="width: auto; margin-right: 10px;">
                 <span>Enable SMS Reminders</span>
             </label>
@@ -139,7 +139,7 @@
         <div class="form-group">
             <label for="sms_api_key">SMS Gateway API Key</label>
             <input type="password" id="sms_api_key" name="sms_api_key"
-                   value="{{ clinic.sms_api_key if hasattr(clinic, 'sms_api_key') else '' }}"
+                   value="{{ clinic.sms_api_key or '' }}"
                    placeholder="Enter your MSG91/Twilio API key">
             <small style="color: #666;">Your API key from SMS provider (MSG91, Twilio, etc.)</small>
         </div>
@@ -148,7 +148,7 @@
             <div class="form-group">
                 <label for="sms_sender_id">DLT Sender ID</label>
                 <input type="text" id="sms_sender_id" name="sms_sender_id"
-                       value="{{ clinic.sms_sender_id if hasattr(clinic, 'sms_sender_id') else '' }}"
+                       value="{{ clinic.sms_sender_id or '' }}"
                        placeholder="E.g., CLNCMT">
                 <small style="color: #666;">6-character DLT approved sender ID</small>
             </div>
@@ -156,7 +156,7 @@
             <div class="form-group">
                 <label for="sms_template_id">DLT Template ID</label>
                 <input type="text" id="sms_template_id" name="sms_template_id"
-                       value="{{ clinic.sms_template_id if hasattr(clinic, 'sms_template_id') else '' }}"
+                       value="{{ clinic.sms_template_id or '' }}"
                        placeholder="E.g., 1234567890123456789">
                 <small style="color: #666;">Your approved DLT template ID</small>
             </div>
@@ -190,7 +190,7 @@
             <strong>Total Appointments:</strong> {{ clinic.appointments|length }}<br>
             <strong>Total Prescriptions:</strong> {{ clinic.prescriptions|length }}<br>
             <strong>Email Verified:</strong> 
-            {% if hasattr(clinic, 'email_verified') and clinic.email_verified %}
+            {% if clinic.email_verified %}
                 <span style="color: #28a745;">✅ Yes</span>
             {% else %}
                 <span style="color: #666;">⏳ Pending</span>

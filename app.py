@@ -123,26 +123,20 @@ def logout():
 @login_required
 def settings():
     """Clinic settings and profile management"""
-    try:
-        clinic_id = session['clinic_id']
-        clinic = Clinic.query.get_or_404(clinic_id)
-        
-        # Set defaults for new columns if they don't exist yet (backward compatibility)
-        if not hasattr(clinic, 'email_verified'):
-            clinic.email_verified = True
-        if not hasattr(clinic, 'sms_enabled'):
-            clinic.sms_enabled = False
-        if not hasattr(clinic, 'sms_api_key'):
-            clinic.sms_api_key = None
-        if not hasattr(clinic, 'sms_sender_id'):
-            clinic.sms_sender_id = None
-        if not hasattr(clinic, 'sms_template_id'):
-            clinic.sms_template_id = None
-    except Exception as e:
-        print(f"🔴 ERROR in settings (before POST): {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise
+    clinic_id = session['clinic_id']
+    clinic = Clinic.query.get_or_404(clinic_id)
+    
+    # Set defaults for new columns if they don't exist yet (backward compatibility)
+    if not hasattr(clinic, 'email_verified') or clinic.email_verified is None:
+        clinic.email_verified = True
+    if not hasattr(clinic, 'sms_enabled') or clinic.sms_enabled is None:
+        clinic.sms_enabled = False
+    if not hasattr(clinic, 'sms_api_key') or clinic.sms_api_key is None:
+        clinic.sms_api_key = ''
+    if not hasattr(clinic, 'sms_sender_id') or clinic.sms_sender_id is None:
+        clinic.sms_sender_id = ''
+    if not hasattr(clinic, 'sms_template_id') or clinic.sms_template_id is None:
+        clinic.sms_template_id = ''
     
     if request.method == 'POST':
         action = request.form.get('action')
