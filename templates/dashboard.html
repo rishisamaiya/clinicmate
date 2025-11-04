@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ session.clinic_name }}{% endblock %}
+
+{% block content %}
+<h1 style="margin: 20px 0;">Welcome, Dr. {{ session.doctor_name }}! 👋</h1>
+<p style="color: #666;">Today: {{ today.strftime('%A, %d %B %Y') }}</p>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="icon">📅</div>
+        <div class="value">{{ appointments|length }}</div>
+        <div class="label">Today's Appointments</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="icon">🏥</div>
+        <div class="value">{{ total_patients }}</div>
+        <div class="label">Total Patients</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="icon">📋</div>
+        <div class="value">{{ today_consultations }}</div>
+        <div class="label">Consultations Today</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="icon">💰</div>
+        <div class="value">₹{{ "%.0f"|format(today_collection) }}</div>
+        <div class="label">Today's Collection</div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>Today's Appointments</h2>
+        <a href="{{ url_for('book_appointment') }}" class="btn">+ Book Appointment</a>
+    </div>
+    
+    {% if appointments %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Patient</th>
+                    <th>Age/Gender</th>
+                    <th>Phone</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appt in appointments %}
+                <tr>
+                    <td>{{ appt.appointment_time }}</td>
+                    <td>
+                        <a href="{{ url_for('view_patient', patient_id=appt.patient.id) }}" style="color: #667eea; text-decoration: none;">
+                            <strong>{{ appt.patient.name }}</strong>
+                        </a>
+                    </td>
+                    <td>{{ appt.patient.age }}Y / {{ appt.patient.gender }}</td>
+                    <td>{{ appt.patient.phone }}</td>
+                    <td>{{ appt.reason or '-' }}</td>
+                    <td>
+                        <span class="badge {{ appt.status }}">{{ appt.status }}</span>
+                    </td>
+                    <td>
+                        {% if appt.status == 'scheduled' %}
+                            <form method="POST" action="{{ url_for('checkin_appointment', appointment_id=appt.id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Check-in</button>
+                            </form>
+                        {% elif appt.status == 'checked-in' %}
+                            <a href="{{ url_for('new_consultation', appointment_id=appt.id) }}" class="btn" style="padding: 5px 10px; font-size: 12px;">Start Consultation</a>
+                        {% elif appt.status == 'completed' and appt.consultation %}
+                            <a href="{{ url_for('view_consultation', consultation_id=appt.consultation.id) }}" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">View</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="text-align: center; padding: 40px; color: #999;">
+            No appointments scheduled for today.<br>
+            <a href="{{ url_for('book_appointment') }}" class="btn" style="margin-top: 10px;">Book First Appointment</a>
+        </p>
+    {% endif %}
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ url_for('add_patient') }}" class="btn">➕ Register New Patient</a>
+    <a href="{{ url_for('patients') }}" class="btn btn-secondary">👥 View All Patients</a>
+</div>
+{% endblock %}
+

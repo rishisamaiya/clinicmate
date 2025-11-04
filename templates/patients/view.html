@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}{{ patient.name }} - {{ session.clinic_name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>👤 {{ patient.name }} ({{ patient.patient_id }})</h2>
+        <a href="{{ url_for('patients') }}" class="btn btn-secondary">← Back</a>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+        <div>
+            <strong>Age:</strong> {{ patient.age }} years<br>
+            <strong>Gender:</strong> {{ patient.gender }}<br>
+            <strong>Blood Group:</strong> {{ patient.blood_group or 'Not specified' }}
+        </div>
+        <div>
+            <strong>Phone:</strong> {{ patient.phone }}<br>
+            <strong>Email:</strong> {{ patient.email or '-' }}<br>
+            <strong>Registered:</strong> {{ patient.registration_date.strftime('%d-%b-%Y') }}
+        </div>
+        <div>
+            <strong>Last Visit:</strong> {{ patient.last_visit.strftime('%d-%b-%Y') if patient.last_visit else 'Never' }}<br>
+            <strong>Total Visits:</strong> {{ consultations|length }}
+        </div>
+    </div>
+    
+    {% if patient.allergies %}
+    <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+        <strong>⚠️ Allergies:</strong> {{ patient.allergies }}
+    </div>
+    {% endif %}
+    
+    {% if patient.chronic_conditions %}
+    <div style="margin-top: 10px; padding: 10px; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 5px;">
+        <strong>🏥 Chronic Conditions:</strong> {{ patient.chronic_conditions }}
+    </div>
+    {% endif %}
+</div>
+
+{% if upcoming_appointments %}
+<div class="card">
+    <h2>📅 Upcoming Appointments</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Reason</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for appt in upcoming_appointments %}
+            <tr>
+                <td>{{ appt.appointment_date.strftime('%d-%b-%Y') }}</td>
+                <td>{{ appt.appointment_time }}</td>
+                <td>{{ appt.reason or '-' }}</td>
+                <td><span class="badge {{ appt.status }}">{{ appt.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>📋 Consultation History</h2>
+    {% if consultations %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Diagnosis</th>
+                    <th>Vitals (BP/Pulse/Temp)</th>
+                    <th>Fee</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for consult in consultations %}
+                <tr>
+                    <td>{{ consult.consultation_date.strftime('%d-%b-%Y %H:%M') }}</td>
+                    <td>{{ consult.diagnosis or '-' }}</td>
+                    <td>
+                        {% if consult.bp_systolic %}{{ consult.bp_systolic }}/{{ consult.bp_diastolic }}{% else %}-{% endif %} | 
+                        {{ consult.pulse or '-' }} | 
+                        {{ consult.temperature or '-' }}°F
+                    </td>
+                    <td>₹{{ "%.0f"|format(consult.total_amount) }}</td>
+                    <td>
+                        <a href="{{ url_for('view_consultation', consultation_id=consult.id) }}" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="text-align: center; padding: 40px; color: #999;">No consultation history yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
