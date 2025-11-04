@@ -341,14 +341,17 @@ document.addEventListener('click', function(e) {
 });
 
 // Save medicines to master list when form is submitted
-document.getElementById('prescriptionForm').addEventListener('submit', function(e) {
+document.getElementById('prescriptionForm').addEventListener('submit', async function(e) {
+    e.preventDefault(); // Prevent immediate submit
+    
     // Get all medicine names
     const medicineNames = document.querySelectorAll('[name^="medicine_name_"]');
+    const savePromises = [];
     
     medicineNames.forEach((input, idx) => {
         const name = input.value.trim();
         if (name) {
-            // Save to medicine master asynchronously
+            // Save to medicine master
             const medicineData = {
                 name: name,
                 dosage: document.querySelector(`[name="medicine_dosage_${idx}"]`)?.value || '',
@@ -357,15 +360,28 @@ document.getElementById('prescriptionForm').addEventListener('submit', function(
                 timing: document.querySelector(`[name="medicine_timing_${idx}"]`)?.value || ''
             };
             
-            fetch('/api/medicines/add', {
+            const promise = fetch('/api/medicines/add', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(medicineData)
             }).catch(error => console.error('Error saving medicine:', error));
+            
+            savePromises.push(promise);
         }
     });
+    
+    // Wait for all medicines to be saved
+    try {
+        await Promise.all(savePromises);
+        console.log('All medicines saved to library');
+    } catch (error) {
+        console.error('Error saving some medicines:', error);
+    }
+    
+    // Now submit the form
+    e.target.submit();
 });
 
 // Add at least one medicine by default
