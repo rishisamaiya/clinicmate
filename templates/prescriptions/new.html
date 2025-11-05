@@ -37,6 +37,38 @@
             <input type="hidden" name="medicine_count" id="medicine_count" value="0">
         </div>
         
+        <!-- Diagnostic Tests Section -->
+        <div style="margin: 30px 0;">
+            <h3 style="color: #667eea; margin-bottom: 15px;">🧪 Diagnostic Tests (if needed)</h3>
+            <div class="form-group" style="position: relative;">
+                <label for="diagnostic_tests">Recommended Lab Tests</label>
+                <textarea id="diagnostic_tests" name="diagnostic_tests" rows="4"
+                          placeholder="E.g., CBC&#10;Blood Sugar Fasting&#10;Lipid Profile&#10;X-Ray Chest PA&#10;(one per line or comma-separated)"
+                          oninput="handleTestInput(this)"></textarea>
+                <div id="test_suggestions" class="autocomplete-suggestions"></div>
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    💡 Tip: Type test name and select from suggestions. Each test on a new line.
+                </small>
+            </div>
+        </div>
+        
+        <!-- Referral Section -->
+        <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3 style="color: #667eea; margin-bottom: 15px;">👨‍⚕️ Referral to Specialist (if needed)</h3>
+            <div class="form-row" style="gap: 15px;">
+                <div class="form-group" style="margin: 0; flex: 1;">
+                    <label for="referral_to">Refer to (Specialist/Doctor)</label>
+                    <input type="text" id="referral_to" name="referral_to"
+                           placeholder="E.g., Dr. Smith - Cardiologist, Orthopedic Specialist">
+                </div>
+                <div class="form-group" style="margin: 0; flex: 2;">
+                    <label for="referral_reason">Reason for Referral</label>
+                    <input type="text" id="referral_reason" name="referral_reason"
+                           placeholder="E.g., For detailed cardiac evaluation, suspected bone fracture">
+                </div>
+            </div>
+        </div>
+        
         <div class="form-group">
             <label for="notes">Advice / Instructions</label>
             <textarea id="notes" name="notes" 
@@ -340,18 +372,114 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Save medicines to master list when form is submitted
+// Diagnostic Tests Autocomplete
+let testSearchTimeout = null;
+let currentTestQuery = '';
+
+function handleTestInput(textarea) {
+    const text = textarea.value;
+    const cursorPos = textarea.selectionStart;
+    
+    // Get the current line
+    const textBeforeCursor = text.substring(0, cursorPos);
+    const lines = textBeforeCursor.split('\n');
+    const currentLine = lines[lines.length - 1].trim();
+    
+    // Clear previous timeout
+    if (testSearchTimeout) {
+        clearTimeout(testSearchTimeout);
+    }
+    
+    // Hide suggestions if query is too short
+    if (currentLine.length < 2) {
+        document.getElementById('test_suggestions').style.display = 'none';
+        return;
+    }
+    
+    currentTestQuery = currentLine;
+    
+    // Debounce search
+    testSearchTimeout = setTimeout(() => {
+        fetch(`/api/tests/search?q=${encodeURIComponent(currentLine)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    showTestSuggestions(data, textarea);
+                } else {
+                    document.getElementById('test_suggestions').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching tests:', error);
+            });
+    }, 300);
+}
+
+function showTestSuggestions(tests, textarea) {
+    const suggestionsDiv = document.getElementById('test_suggestions');
+    suggestionsDiv.innerHTML = '';
+    
+    tests.forEach((test) => {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        
+        let html = `<strong>${test.name}</strong>`;
+        if (test.category) {
+            html += `<br><small>${test.category}</small>`;
+        }
+        
+        item.innerHTML = html;
+        item.onclick = () => selectTest(test.name, textarea);
+        suggestionsDiv.appendChild(item);
+    });
+    
+    suggestionsDiv.style.display = 'block';
+}
+
+function selectTest(testName, textarea) {
+    const text = textarea.value;
+    const cursorPos = textarea.selectionStart;
+    
+    // Get text before and after cursor
+    const textBeforeCursor = text.substring(0, cursorPos);
+    const textAfterCursor = text.substring(cursorPos);
+    
+    // Replace the current line with the selected test
+    const lines = textBeforeCursor.split('\n');
+    lines[lines.length - 1] = testName;
+    
+    // Reconstruct the text
+    textarea.value = lines.join('\n') + textAfterCursor;
+    
+    // Hide suggestions
+    document.getElementById('test_suggestions').style.display = 'none';
+    
+    // Save test to master
+    fetch('/api/tests/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: testName })
+    }).catch(error => console.error('Error saving test:', error));
+    
+    // Move cursor to end of inserted text
+    const newCursorPos = lines.join('\n').length;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    textarea.focus();
+}
+
+// Save medicines and tests to master list when form is submitted
 document.getElementById('prescriptionForm').addEventListener('submit', async function(e) {
     e.preventDefault(); // Prevent immediate submit
     
-    // Get all medicine names
-    const medicineNames = document.querySelectorAll('[name^="medicine_name_"]');
     const savePromises = [];
     
+    // Save all medicines
+    const medicineNames = document.querySelectorAll('[name^="medicine_name_"]');
     medicineNames.forEach((input, idx) => {
         const name = input.value.trim();
         if (name) {
-            // Save to medicine master
             const medicineData = {
                 name: name,
                 dosage: document.querySelector(`[name="medicine_dosage_${idx}"]`)?.value || '',
@@ -372,12 +500,29 @@ document.getElementById('prescriptionForm').addEventListener('submit', async fun
         }
     });
     
-    // Wait for all medicines to be saved
+    // Save all diagnostic tests
+    const testsTextarea = document.getElementById('diagnostic_tests');
+    if (testsTextarea && testsTextarea.value.trim()) {
+        const tests = testsTextarea.value.split(/[\n,]+/).map(t => t.trim()).filter(t => t.length > 0);
+        tests.forEach(testName => {
+            const promise = fetch('/api/tests/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: testName })
+            }).catch(error => console.error('Error saving test:', error));
+            
+            savePromises.push(promise);
+        });
+    }
+    
+    // Wait for all to be saved
     try {
         await Promise.all(savePromises);
-        console.log('All medicines saved to library');
+        console.log('All medicines and tests saved to library');
     } catch (error) {
-        console.error('Error saving some medicines:', error);
+        console.error('Error saving some items:', error);
     }
     
     // Now submit the form

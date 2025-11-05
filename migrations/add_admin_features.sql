@@ -90,3 +90,4 @@ COMMENT ON COLUMN clinics.sms_template_id IS 'DLT approved template ID';
 
 -- Migration completed successfully
 
+

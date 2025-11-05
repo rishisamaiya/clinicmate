@@ -59,3 +59,4 @@ COMMENT ON TABLE medicines IS 'Stores individual medicine entries for prescripti
 
 -- Migration completed successfully
 
+

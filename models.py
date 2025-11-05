@@ -227,6 +227,13 @@ class Prescription(db.Model):
     diagnosis = db.Column(db.Text)
     notes = db.Column(db.Text)  # General advice, precautions
     
+    # Diagnostic Tests
+    diagnostic_tests = db.Column(db.Text)  # Recommended lab tests (newline-separated)
+    
+    # Referral to Specialist
+    referral_to = db.Column(db.String(200))  # Specialist name/type (e.g., "Dr. XYZ - Cardiologist")
+    referral_reason = db.Column(db.Text)  # Why referring
+    
     # Follow-up
     follow_up_date = db.Column(db.Date)
     follow_up_notes = db.Column(db.Text)
@@ -310,6 +317,33 @@ class MedicineMaster(db.Model):
     # Unique constraint: one medicine name per clinic
     __table_args__ = (
         db.UniqueConstraint('clinic_id', 'name', name='unique_medicine_per_clinic'),
+    )
+
+
+class DiagnosticTestMaster(db.Model):
+    """Master list of diagnostic tests for autocomplete suggestions"""
+    __tablename__ = 'diagnostic_test_master'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    clinic_id = db.Column(db.Integer, db.ForeignKey('clinics.id'), nullable=False)
+    
+    # Test details
+    name = db.Column(db.String(200), nullable=False)  # Test name (e.g., "CBC", "X-Ray Chest")
+    category = db.Column(db.String(100))  # E.g., Blood Test, Imaging, etc.
+    
+    # Usage tracking
+    usage_count = db.Column(db.Integer, default=1)  # How many times recommended
+    last_used = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    clinic = db.relationship('Clinic', backref='diagnostic_test_library')
+    
+    # Unique constraint: one test name per clinic
+    __table_args__ = (
+        db.UniqueConstraint('clinic_id', 'name', name='unique_test_per_clinic'),
     )
 
 

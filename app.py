@@ -3,7 +3,7 @@ Clinic Management System - Simple Prototype
 A basic healthcare management system for small clinics
 """
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from models import db, Clinic, Patient, Appointment, Consultation, Prescription, Medicine, MedicineMaster
+from models import db, Clinic, Patient, Appointment, Consultation, Prescription, Medicine, MedicineMaster, DiagnosticTestMaster
 from datetime import datetime, date, timedelta
 import os
 
@@ -544,7 +544,10 @@ def new_prescription(patient_id):
                 consultation_id=consultation_id,
                 prescription_number=prescription_number,
                 diagnosis=request.form.get('diagnosis'),
-                notes=request.form.get('notes')
+                notes=request.form.get('notes'),
+                diagnostic_tests=request.form.get('diagnostic_tests'),
+                referral_to=request.form.get('referral_to'),
+                referral_reason=request.form.get('referral_reason')
             )
             
             # Follow-up date if provided
@@ -615,6 +618,9 @@ def edit_prescription(prescription_id):
             # Update prescription details
             prescription.diagnosis = request.form.get('diagnosis')
             prescription.notes = request.form.get('notes')
+            prescription.diagnostic_tests = request.form.get('diagnostic_tests')
+            prescription.referral_to = request.form.get('referral_to')
+            prescription.referral_reason = request.form.get('referral_reason')
             prescription.updated_at = datetime.utcnow()
             
             # Follow-up date
@@ -766,6 +772,82 @@ def add_medicine_to_master():
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Medicine added to library'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# API Routes - Diagnostic Tests Autocomplete
+# ============================================================================
+
+@app.route('/api/tests/search')
+@login_required
+def search_diagnostic_tests():
+    """Search diagnostic tests for autocomplete"""
+    clinic_id = session['clinic_id']
+    query = request.args.get('q', '').strip()
+    
+    if not query or len(query) < 2:
+        return jsonify([])
+    
+    # Search in diagnostic test master (case-insensitive)
+    tests = DiagnosticTestMaster.query.filter_by(clinic_id=clinic_id).filter(
+        db.or_(
+            DiagnosticTestMaster.name.ilike(f'{query}%'),
+            DiagnosticTestMaster.name.ilike(f'%{query}%')
+        )
+    ).order_by(
+        DiagnosticTestMaster.usage_count.desc(),
+        DiagnosticTestMaster.name
+    ).limit(10).all()
+    
+    results = []
+    for test in tests:
+        results.append({
+            'name': test.name,
+            'category': test.category,
+            'usage_count': test.usage_count
+        })
+    
+    return jsonify(results)
+
+
+@app.route('/api/tests/add', methods=['POST'])
+@login_required
+def add_test_to_master():
+    """Add or update diagnostic test in master list"""
+    clinic_id = session['clinic_id']
+    data = request.get_json()
+    
+    test_name = data.get('name', '').strip()
+    if not test_name:
+        return jsonify({'success': False, 'error': 'Test name required'}), 400
+    
+    try:
+        # Check if test already exists
+        test = DiagnosticTestMaster.query.filter_by(
+            clinic_id=clinic_id,
+            name=test_name
+        ).first()
+        
+        if test:
+            # Update usage count and last used
+            test.usage_count += 1
+            test.last_used = datetime.utcnow()
+        else:
+            # Create new test entry
+            test = DiagnosticTestMaster(
+                clinic_id=clinic_id,
+                name=test_name,
+                category=data.get('category'),
+                usage_count=1
+            )
+            db.session.add(test)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Test added to library'})
         
     except Exception as e:
         db.session.rollback()

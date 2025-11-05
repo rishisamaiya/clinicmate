@@ -136,3 +136,4 @@ Then run the SQL migration in Supabase Dashboard!
 
 Good luck! 🚀
 
+

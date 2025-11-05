@@ -46,6 +46,18 @@
         /* Prevent page breaks */
         .prescription-box { page-break-inside: avoid; }
         .medicine-table { page-break-inside: avoid; }
+        /* Compact tests and referral sections for print */
+        .tests-section, .referral-section { 
+            padding: 5px !important; 
+            margin: 5px 0 !important; 
+            font-size: 11px !important;
+            page-break-inside: avoid;
+        }
+        .tests-section div, .referral-section div { 
+            margin: 2px 0 !important; 
+            padding: 3px !important;
+            line-height: 1.2 !important;
+        }
         /* Reduce header spacing */
         .prescription-header { 
             padding-bottom: 5px !important; 
@@ -175,6 +187,35 @@
     {% else %}
     <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
         <p style="margin: 0;">⚠️ No medicines added to this prescription</p>
+    </div>
+    {% endif %}
+    
+    <!-- Diagnostic Tests -->
+    {% if prescription.diagnostic_tests %}
+    <div class="tests-section" style="margin: 12px 0;">
+        <strong style="font-size: 14px;">🧪 Recommended Lab Tests:</strong>
+        <div style="margin: 5px 0 0 15px; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 5px;">
+            {% for test in prescription.diagnostic_tests.split('\n') %}
+                {% if test.strip() %}
+                <div style="font-size: 12px; margin: 3px 0;">
+                    • {{ test.strip() }}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Referral Section -->
+    {% if prescription.referral_to %}
+    <div class="referral-section" style="margin: 12px 0; padding: 10px; background: #fff8e1; border: 1px solid #ffc107; border-radius: 5px;">
+        <strong style="font-size: 14px;">👨‍⚕️ Referral to Specialist:</strong>
+        <div style="margin: 5px 0 0 15px; font-size: 12px;">
+            <strong>Refer to:</strong> {{ prescription.referral_to }}<br>
+            {% if prescription.referral_reason %}
+            <strong>Reason:</strong> {{ prescription.referral_reason }}
+            {% endif %}
+        </div>
     </div>
     {% endif %}
     
